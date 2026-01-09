@@ -221,7 +221,7 @@
                 </div>
 
                 <button type="submit" class="btn-primary" id="submitBtn">
-                    <span><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Descargar YAML</span>
+                    <span><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Descargar CV en PDF</span>
                 </button>
             </form>
         </div>
@@ -232,10 +232,8 @@
             <div class="preview-content">
                 <div style="width:100%">
                     <div class="info-box">
-                        <h4>📌 Cómo usar tu CV</h4>
-                        <p>1. Llena el formulario y descarga el YAML<br>
-                        2. Instala RenderCV: <code>pip install "rendercv[full]"</code><br>
-                        3. Genera tu PDF: <code>rendercv render tu_cv.yaml</code></p>
+                        <h4>📌 Vista previa de la plantilla</h4>
+                        <p>Selecciona una plantilla a la izquierda para ver cómo lucirá tu CV.</p>
                     </div>
                     <div class="preview-frame">
                         <iframe id="previewFrame" src="/preview/classic"></iframe>
@@ -395,7 +393,7 @@
             btn.disabled = true;
             loading.classList.add('active');
             try {
-                const response = await fetch('/generate-yaml', {
+                const response = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(collectData())
@@ -405,13 +403,15 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = (document.getElementById('name').value || 'mi_cv').replace(/\s+/g, '_') + '_CV.yaml';
+                    a.download = (document.getElementById('name').value || 'mi_cv').replace(/\s+/g, '_') + '_CV.pdf';
                     a.click();
+                    window.URL.revokeObjectURL(url);
                 } else {
-                    alert('Error al generar el archivo');
+                    const err = await response.json();
+                    alert('Error: ' + (err.error || 'No se pudo generar el PDF'));
                 }
             } catch (err) {
-                alert('Error: ' + err.message);
+                alert('Error de conexión: ' + err.message);
             } finally {
                 btn.disabled = false;
                 loading.classList.remove('active');
