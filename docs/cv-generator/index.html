@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Studio Pro - Generador de CV</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <style>
+        :root {
+            --bg-deep: #0F0F1A;
+            --bg-surface: #1A1A2E;
+            --bg-glass: rgba(255,255,255,0.03);
+            --border: rgba(255,255,255,0.08);
+            --border-focus: rgba(139,92,246,0.5);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --accent: #8B5CF6;
+            --accent-glow: rgba(139,92,246,0.4);
+            --accent-soft: rgba(139,92,246,0.15);
+            --success: #10B981;
+            --danger: #EF4444;
+            --input-bg: rgba(255,255,255,0.05);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 480px;
+            min-height: 100vh;
+        }
+        @media (max-width: 1100px) {
+            .app-container { grid-template-columns: 1fr; }
+            .preview-panel { display: none; }
+        }
+        .form-panel {
+            padding: 32px 48px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+        @media (max-width: 600px) {
+            .form-panel { padding: 20px; }
+        }
+        .header { margin-bottom: 32px; }
+        .logo {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent) 0%, #EC4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        .tagline { color: var(--text-secondary); font-size: 0.9rem; }
+        .progress-container { margin-bottom: 32px; }
+        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .progress-label { font-size: 0.85rem; color: var(--text-secondary); }
+        .progress-percent { font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+        .progress-bar { height: 6px; background: var(--input-bg); border-radius: 100px; overflow: hidden; }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent) 0%, #EC4899 100%);
+            border-radius: 100px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+        }
+        .section {
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+        .section:hover { border-color: rgba(255,255,255,0.12); }
+        .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .section-icon {
+            width: 36px; height: 36px;
+            background: var(--accent-soft);
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--accent);
+        }
+        .section-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.1rem; font-weight: 600;
+            color: var(--text-primary);
+        }
+        .input-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        @media (max-width: 600px) { .input-grid { grid-template-columns: 1fr; } }
+        .input-full { grid-column: 1 / -1; }
+        .input-group { position: relative; }
+        .input-field {
+            width: 100%; padding: 16px 16px 8px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 0.95rem; font-family: inherit;
+            transition: all 0.3s ease; outline: none;
+        }
+        .input-field::placeholder { color: transparent; }
+        .input-field:focus {
+            border-color: var(--border-focus);
+            background: rgba(139,92,246,0.05);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .input-label {
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 0.95rem;
+            pointer-events: none; transition: all 0.2s ease;
+        }
+        .input-field:focus + .input-label,
+        .input-field:not(:placeholder-shown) + .input-label {
+            top: 8px; transform: translateY(0);
+            font-size: 0.7rem; color: var(--accent);
+        }
+        textarea.input-field { min-height: 100px; resize: vertical; padding-top: 24px; }
+        textarea.input-field + .input-label { top: 16px; transform: translateY(0); }
+        textarea.input-field:focus + .input-label,
+        textarea.input-field:not(:placeholder-shown) + .input-label { top: 8px; }
+        .select-field {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394A3B8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 44px; cursor: pointer;
+        }
+        .template-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+        @media (max-width: 800px) { .template-grid { grid-template-columns: repeat(3, 1fr); } }
+        .template-card {
+            aspect-ratio: 3/4;
+            background: var(--input-bg);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .template-card:hover { border-color: var(--text-muted); transform: translateY(-2px); }
+        .template-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+        .template-name {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 8px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            font-size: 0.7rem; font-weight: 500;
+            text-align: center; text-transform: capitalize;
+        }
+        .template-icon { font-size: 2rem; opacity: 0.5; }
+        .dynamic-list { display: flex; flex-direction: column; gap: 16px; }
+        .dynamic-item {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            position: relative;
+        }
+        .remove-btn {
+            position: absolute; top: 12px; right: 12px;
+            width: 28px; height: 28px;
+            background: rgba(239,68,68,0.15);
+            border: none; border-radius: 6px;
+            color: var(--danger); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .remove-btn:hover { background: var(--danger); color: white; }
+        .btn-add {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 16px;
+            background: transparent;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 0.85rem; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+        .btn-primary {
+            width: 100%; padding: 18px 32px;
+            background: linear-gradient(135deg, var(--accent) 0%, #7C3AED 100%);
+            border: none; border-radius: var(--radius-md);
+            color: white; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease;
+            position: relative; overflow: hidden;
+            margin-bottom: 12px;
+        }
+        .btn-primary::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .btn-primary:hover::before { opacity: 1; }
+        .btn-primary span { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-secondary {
+            width: 100%; padding: 14px 32px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: 0.9rem; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+        .preview-panel {
+            background: #141420;
+            border-left: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            position: sticky; top: 0; height: 100vh;
+        }
+        .preview-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .preview-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); }
+        .preview-content {
+            flex: 1; padding: 24px; overflow: auto;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        .yaml-preview {
+            background: #0d0d14;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            overflow: auto;
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .info-box {
+            background: var(--accent-soft);
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+        .info-box h4 { color: var(--accent); font-size: 0.85rem; margin-bottom: 8px; }
+        .info-box p { color: var(--text-secondary); font-size: 0.8rem; line-height: 1.5; }
+        .info-box code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="form-panel">
+            <header class="header">
+                <h1 class="logo">CV Studio</h1>
+                <p class="tagline">Crea tu currículum profesional en minutos</p>
+            </header>
+            
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span class="progress-label">Progreso del CV</span>
+                    <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+            
+            <form id="cvForm">
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                        </div>
+                        <h2 class="section-title">Elige tu plantilla</h2>
+                    </div>
+                    
+                    <div class="template-grid" id="templateGrid">
+                        <div class="template-card active" data-theme="classic" onclick="selectTemplate('classic')">
+                            <span class="template-icon">📄</span>
+                            <span class="template-name">Classic</span>
+                        </div>
+                        <div class="template-card" data-theme="moderncv" onclick="selectTemplate('moderncv')">
+                            <span class="template-icon">✨</span>
+                            <span class="template-name">ModernCV</span>
+                        </div>
+                        <div class="template-card" data-theme="sb2nov" onclick="selectTemplate('sb2nov')">
+                            <span class="template-icon">🎯</span>
+                            <span class="template-name">Sb2nov</span>
+                        </div>
+                        <div class="template-card" data-theme="engineeringclassic" onclick="selectTemplate('engineeringclassic')">
+                            <span class="template-icon">⚙️</span>
+                            <span class="template-name">Engineering</span>
+                        </div>
+                        <div class="template-card" data-theme="engineeringresumes" onclick="selectTemplate('engineeringresumes')">
+                            <span class="template-icon">🔧</span>
+                            <span class="template-name">Eng. Resumes</span>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="theme" value="classic">
+                    
+                    <div class="input-grid" style="margin-top: 16px;">
+                        <div class="input-group">
+                            <select class="input-field select-field" id="language">
+                                <option value="spanish">Español</option>
+                                <option value="english">English</option>
+                            </select>
+                            <label class="input-label" style="top: 8px; transform: none; font-size: 0.7rem; color: var(--accent);">Idioma del CV</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></svg>
+                        </div>
+                        <h2 class="section-title">Información Personal</h2>
+                    </div>
+                    
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <input type="text" class="input-field" id="name" placeholder=" " required oninput="updatePreview()">
+                            <label class="input-label">Nombre completo *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="input-field" id="headline" placeholder=" " oninput="updatePreview()">
+                            <label class="input-label">Título profesional</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="email" class="input-field" id="email" placeholder=" " required oninput="updatePreview()">
+                            <label class="input-label">Email *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="tel" class="input-field" id="phone" placeholder=" " oninput="updatePreview()">
+                            <label class="input-label">Teléfono</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="input-field" id="location" placeholder=" " oninput="updatePreview()">
+                            <label class="input-label">Ubicación</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="url" class="input-field" id="website" placeholder=" " oninput="updatePreview()">
+                            <label class="input-label">Sitio web</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="input-field" id="linkedin" placeholder=" " oninput="updatePreview()">
+                            <label class="input-label">LinkedIn (usuario)</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="input-field" id="github" placeholder=" " oninput="updatePreview()">
+                            <label class="input-label">GitHub (usuario)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                        </div>
+                        <h2 class="section-title">Resumen Profesional</h2>
+                    </div>
+                    <div class="dynamic-list" id="summaryList"></div>
+                    <button type="button" class="btn-add" onclick="addSummary()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        Agregar párrafo
+                    </button>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+                        </div>
+                        <h2 class="section-title">Experiencia Laboral</h2>
+                    </div>
+                    <div class="dynamic-list" id="experienceList"></div>
+                    <button type="button" class="btn-add" onclick="addExperience()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        Agregar experiencia
+                    </button>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                        </div>
+                        <h2 class="section-title">Educación</h2>
+                    </div>
+                    <div class="dynamic-list" id="educationList"></div>
+                    <button type="button" class="btn-add" onclick="addEducation()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        Agregar educación
+                    </button>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                        </div>
+                        <h2 class="section-title">Proyectos</h2>
+                    </div>
+                    <div class="dynamic-list" id="projectsList"></div>
+                    <button type="button" class="btn-add" onclick="addProject()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        Agregar proyecto
+                    </button>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        </div>
+                        <h2 class="section-title">Habilidades</h2>
+                    </div>
+                    <div class="dynamic-list" id="skillsList"></div>
+                    <button type="button" class="btn-add" onclick="addSkill()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        Agregar habilidad
+                    </button>
+                </div>
+
+                <button type="button" class="btn-primary" onclick="downloadYAML()">
+                    <span>
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        Descargar YAML
+                    </span>
+                </button>
+                <button type="button" class="btn-secondary" onclick="copyYAML()">
+                    📋 Copiar al portapapeles
+                </button>
+            </form>
+        </div>
+
+        <div class="preview-panel">
+            <div class="preview-header">
+                <span class="preview-title">Vista previa YAML</span>
+            </div>
+            <div class="preview-content">
+                <div class="info-box">
+                    <h4>📌 Cómo usar tu CV</h4>
+                    <p>1. Descarga el archivo YAML<br>
+                    2. Instala RenderCV: <code>pip install "rendercv[full]"</code><br>
+                    3. Genera tu PDF: <code>rendercv render tu_cv.yaml</code></p>
+                </div>
+                <pre class="yaml-preview" id="yamlPreview">cv:
+  name: ""
+  headline: ""
+  location: ""
+  email: ""
+design:
+  theme: classic
+locale:
+  language: spanish</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function selectTemplate(theme) {
+            document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+            document.getElementById('theme').value = theme;
+            updatePreview();
+        }
+
+        function updateProgress() {
+            const fields = ['name', 'email', 'headline', 'phone', 'location', 'website', 'linkedin', 'github'];
+            let filled = fields.filter(id => document.getElementById(id)?.value.trim()).length;
+            if (document.querySelectorAll('.summary-item').length > 0) filled += 2;
+            if (document.querySelectorAll('.experience-item').length > 0) filled += 2;
+            if (document.querySelectorAll('.education-item').length > 0) filled += 2;
+            if (document.querySelectorAll('.skill-item').length > 0) filled += 1;
+            const percent = Math.min(100, Math.round((filled / 15) * 100));
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = percent + '%';
+        }
+
+        function collectData() {
+            const data = {
+                cv: {
+                    name: document.getElementById('name').value || '',
+                    headline: document.getElementById('headline').value || null,
+                    location: document.getElementById('location').value || null,
+                    email: document.getElementById('email').value || '',
+                    phone: document.getElementById('phone').value || null,
+                    website: document.getElementById('website').value || null,
+                    social_networks: [],
+                    sections: {}
+                },
+                design: { theme: document.getElementById('theme').value },
+                locale: { language: document.getElementById('language').value }
+            };
+
+            if (document.getElementById('linkedin').value) {
+                data.cv.social_networks.push({ network: 'LinkedIn', username: document.getElementById('linkedin').value });
+            }
+            if (document.getElementById('github').value) {
+                data.cv.social_networks.push({ network: 'GitHub', username: document.getElementById('github').value });
+            }
+            if (data.cv.social_networks.length === 0) delete data.cv.social_networks;
+
+            const summaries = [];
+            document.querySelectorAll('.summary-item').forEach(el => {
+                if (el.value.trim()) summaries.push(el.value.trim());
+            });
+            if (summaries.length) data.cv.sections.resumen = summaries;
+
+            const experiences = [];
+            document.querySelectorAll('.experience-item').forEach(el => {
+                const exp = {
+                    company: el.querySelector('.exp-company')?.value || '',
+                    position: el.querySelector('.exp-position')?.value || '',
+                    start_date: el.querySelector('.exp-start')?.value || '',
+                    end_date: el.querySelector('.exp-end')?.value || 'present',
+                    location: el.querySelector('.exp-location')?.value || null,
+                    highlights: (el.querySelector('.exp-highlights')?.value || '').split('\n').filter(h => h.trim()).map(h => h.replace(/^-\s*/, ''))
+                };
+                if (exp.company) experiences.push(exp);
+            });
+            if (experiences.length) data.cv.sections.experiencia = experiences;
+
+            const educations = [];
+            document.querySelectorAll('.education-item').forEach(el => {
+                const edu = {
+                    institution: el.querySelector('.edu-institution')?.value || '',
+                    degree: el.querySelector('.edu-degree')?.value || '',
+                    area: el.querySelector('.edu-area')?.value || '',
+                    start_date: el.querySelector('.edu-start')?.value || '',
+                    end_date: el.querySelector('.edu-end')?.value || '',
+                    location: el.querySelector('.edu-location')?.value || null
+                };
+                if (edu.institution) educations.push(edu);
+            });
+            if (educations.length) data.cv.sections['educación'] = educations;
+
+            const projects = [];
+            document.querySelectorAll('.project-item').forEach(el => {
+                const proj = {
+                    name: el.querySelector('.proj-name')?.value || '',
+                    summary: el.querySelector('.proj-summary')?.value || ''
+                };
+                if (proj.name) projects.push(proj);
+            });
+            if (projects.length) data.cv.sections.proyectos = projects;
+
+            const skills = [];
+            document.querySelectorAll('.skill-item').forEach(el => {
+                const skill = {
+                    label: el.querySelector('.skill-label')?.value || '',
+                    details: el.querySelector('.skill-details')?.value || ''
+                };
+                if (skill.label) skills.push(skill);
+            });
+            if (skills.length) data.cv.sections.skills = skills;
+
+            // Clean nulls
+            Object.keys(data.cv).forEach(k => { if (data.cv[k] === null || data.cv[k] === '') delete data.cv[k]; });
+
+            return data;
+        }
+
+        function updatePreview() {
+            updateProgress();
+            const data = collectData();
+            const yaml = jsyaml.dump(data, { indent: 2, lineWidth: -1, quotingType: '"', forceQuotes: false });
+            document.getElementById('yamlPreview').textContent = yaml;
+        }
+
+        function downloadYAML() {
+            const data = collectData();
+            const yaml = jsyaml.dump(data, { indent: 2, lineWidth: -1 });
+            const blob = new Blob([yaml], { type: 'text/yaml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const name = (data.cv.name || 'mi_cv').replace(/\s+/g, '_');
+            a.href = url;
+            a.download = `${name}_CV.yaml`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function copyYAML() {
+            const yaml = document.getElementById('yamlPreview').textContent;
+            navigator.clipboard.writeText(yaml).then(() => {
+                alert('✅ YAML copiado al portapapeles');
+            });
+        }
+
+        function addSummary() {
+            const list = document.getElementById('summaryList');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="this.parentElement.remove(); updatePreview();">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <div class="input-group">
+                    <textarea class="input-field summary-item" placeholder=" " oninput="updatePreview()"></textarea>
+                    <label class="input-label">Describe tu perfil profesional</label>
+                </div>
+            `;
+            list.appendChild(div);
+            updatePreview();
+        }
+
+        function addExperience() {
+            const list = document.getElementById('experienceList');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item experience-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="this.parentElement.remove(); updatePreview();">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <div class="input-grid">
+                    <div class="input-group"><input type="text" class="input-field exp-company" placeholder=" " oninput="updatePreview()"><label class="input-label">Empresa</label></div>
+                    <div class="input-group"><input type="text" class="input-field exp-position" placeholder=" " oninput="updatePreview()"><label class="input-label">Cargo</label></div>
+                    <div class="input-group"><input type="month" class="input-field exp-start" oninput="updatePreview()"><label class="input-label" style="top:8px;transform:none;font-size:0.7rem;color:var(--accent)">Fecha inicio</label></div>
+                    <div class="input-group"><input type="text" class="input-field exp-end" placeholder=" " oninput="updatePreview()"><label class="input-label">Fecha fin</label></div>
+                    <div class="input-group input-full"><input type="text" class="input-field exp-location" placeholder=" " oninput="updatePreview()"><label class="input-label">Ubicación</label></div>
+                    <div class="input-group input-full"><textarea class="input-field exp-highlights" placeholder=" " oninput="updatePreview()"></textarea><label class="input-label">Logros (uno por línea)</label></div>
+                </div>
+            `;
+            list.appendChild(div);
+            updatePreview();
+        }
+
+        function addEducation() {
+            const list = document.getElementById('educationList');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item education-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="this.parentElement.remove(); updatePreview();">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <div class="input-grid">
+                    <div class="input-group"><input type="text" class="input-field edu-institution" placeholder=" " oninput="updatePreview()"><label class="input-label">Institución</label></div>
+                    <div class="input-group"><input type="text" class="input-field edu-degree" placeholder=" " oninput="updatePreview()"><label class="input-label">Título</label></div>
+                    <div class="input-group"><input type="text" class="input-field edu-area" placeholder=" " oninput="updatePreview()"><label class="input-label">Área</label></div>
+                    <div class="input-group"><input type="text" class="input-field edu-location" placeholder=" " oninput="updatePreview()"><label class="input-label">Ubicación</label></div>
+                    <div class="input-group"><input type="month" class="input-field edu-start" oninput="updatePreview()"><label class="input-label" style="top:8px;transform:none;font-size:0.7rem;color:var(--accent)">Fecha inicio</label></div>
+                    <div class="input-group"><input type="text" class="input-field edu-end" placeholder=" " oninput="updatePreview()"><label class="input-label">Fecha fin</label></div>
+                </div>
+            `;
+            list.appendChild(div);
+            updatePreview();
+        }
+
+        function addProject() {
+            const list = document.getElementById('projectsList');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item project-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="this.parentElement.remove(); updatePreview();">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <div class="input-grid">
+                    <div class="input-group input-full"><input type="text" class="input-field proj-name" placeholder=" " oninput="updatePreview()"><label class="input-label">Nombre del proyecto</label></div>
+                    <div class="input-group input-full"><textarea class="input-field proj-summary" placeholder=" " oninput="updatePreview()"></textarea><label class="input-label">Descripción</label></div>
+                </div>
+            `;
+            list.appendChild(div);
+            updatePreview();
+        }
+
+        function addSkill() {
+            const list = document.getElementById('skillsList');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item skill-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="this.parentElement.remove(); updatePreview();">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <div class="input-grid">
+                    <div class="input-group"><input type="text" class="input-field skill-label" placeholder=" " oninput="updatePreview()"><label class="input-label">Categoría</label></div>
+                    <div class="input-group"><input type="text" class="input-field skill-details" placeholder=" " oninput="updatePreview()"><label class="input-label">Tecnologías</label></div>
+                </div>
+            `;
+            list.appendChild(div);
+            updatePreview();
+        }
+
+        // Init
+        addSummary();
+        addExperience();
+        addEducation();
+        addSkill();
+        updatePreview();
+    </script>
+</body>
+</html>
